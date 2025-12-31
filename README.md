@@ -1,14 +1,13 @@
 # Banking AI Agent
 
-A Spring Boot application that integrates multiple LLM providers (OpenAI, Google Gemini, Ollama) to create an intelligent banking agent. Built using the Embabel Agent framework principles for agentic AI workflows.
+A Spring Boot application that demonstrates AI-powered banking operations with full observability using OpenTelemetry and Dynatrace.
 
 ## Features
 
-- 🤖 **Multi-LLM Support**: Integrates with OpenAI (GPT-4), Google Gemini, and Ollama for flexible AI model selection
+- 🤖 **LLM Integration**: Integrates with Ollama for AI-powered banking assistance
 - 🏦 **Banking Operations**: Account management, transactions, deposits, withdrawals, and transfers
 - 🎯 **Intent Recognition**: AI-powered understanding of customer queries
-- 🔄 **Dynamic Provider Selection**: Choose between free-tier and open-source LLM models
-- 📊 **Transaction History**: View and analyze account transactions
+- 📊 **Full Observability**: Traces, logs, and metrics exported to Dynatrace via OTLP
 - 💬 **Natural Language Interface**: Interact with banking services using conversational queries
 
 ## Technology Stack
@@ -16,60 +15,59 @@ A Spring Boot application that integrates multiple LLM providers (OpenAI, Google
 - **Framework**: Spring Boot 3.5.9
 - **Language**: Java 21
 - **AI Framework**: Spring AI 1.0.0-M6
-- **Observability**: OpenTelemetry + Micrometer (Dynatrace OTLP)
-- **Database**: H2 (development), easily switchable to PostgreSQL/MySQL
-- **LLM Providers**:
-  - OpenAI (GPT-4o-mini)
-  - Google Gemini (gemini-2.0-flash-exp)
-  - Ollama (llama3.2 or any local model)
+- **Observability**: OpenTelemetry SDK + Micrometer OTLP (Dynatrace)
+- **Database**: H2 (in-memory for development)
+- **LLM Provider**: Ollama (local models like llama3.2)
 
 ## Project Structure
 
 ```
-banking-agent/
-├── src/main/java/com/banking/agent/
-│   ├── BankingAgentApplication.java     # Main application entry point
-│   ├── agent/
-│   │   └── BankingAgent.java            # AI agent for processing requests
-│   ├── config/
-│   │   ├── BankingAgentConfig.java      # Banking-specific configuration
-│   │   └── LlmConfig.java               # LLM provider configuration
-│   ├── controller/
-│   │   ├── AccountController.java       # Account management API
-│   │   ├── TransactionController.java   # Transaction management API
-│   │   └── BankingAgentController.java  # AI agent interaction API
-│   ├── domain/
-│   │   ├── Account.java                 # Account entity
-│   │   ├── Transaction.java             # Transaction entity
-│   │   ├── BankingRequest.java          # Request DTO
-│   │   └── BankingResponse.java         # Response DTO
-│   ├── repository/
-│   │   ├── AccountRepository.java       # Account data access
-│   │   └── TransactionRepository.java   # Transaction data access
-│   └── service/
-│       ├── AccountService.java          # Account business logic
-│       ├── TransactionService.java      # Transaction business logic
-│       └── LlmProviderService.java      # LLM provider management
-└── src/main/resources/
-    └── application.yml                   # Application configuration
+src/main/java/com/banking/agent/
+├── BankingAgentApplication.java          # Main application entry point
+├── agent/
+│   └── BankingAgent.java                 # AI agent for processing requests
+├── config/
+│   ├── BankingAgentConfig.java           # Banking-specific configuration
+│   ├── DataInitializer.java              # Sample data initialization
+│   ├── DynatraceMonitoringConfig.java    # OpenTelemetry SDK configuration
+│   ├── LlmConfig.java                    # LLM provider configuration
+│   └── RestClientConfig.java             # REST client configuration
+├── controller/
+│   ├── AccountController.java            # Account management API
+│   ├── BankingAgentController.java       # AI agent interaction API
+│   ├── TransactionController.java        # Transaction management API
+│   └── UserSatisfactionController.java   # User feedback API
+├── domain/
+│   ├── Account.java                      # Account entity
+│   ├── BankingRequest.java               # Request DTO
+│   ├── BankingResponse.java              # Response DTO
+│   ├── Transaction.java                  # Transaction entity
+│   └── UserSatisfaction.java             # User satisfaction entity
+├── repository/
+│   ├── AccountRepository.java            # Account data access
+│   └── TransactionRepository.java        # Transaction data access
+└── service/
+    ├── AccountService.java               # Account business logic
+    ├── LlmMonitoringService.java         # LLM call monitoring
+    ├── LlmProviderService.java           # LLM provider management
+    ├── OpenLLMetryService.java           # OpenLLMetry integration
+    └── TransactionService.java           # Transaction business logic
 ```
 
 ## Prerequisites
 
 - Java 21 or higher
 - Maven 3.8+
-- (Optional) Docker for running Ollama locally
-- API Keys for LLM providers (at least one):
-  - OpenAI API Key
-  - Google Cloud Project (for Gemini)
-  - Ollama installation (for local models)
+- Ollama installed locally (for AI features)
+- (Optional) Dynatrace tenant for observability
 
-## Setup
+## Quick Start
 
 ### 1. Clone the Repository
 
 ```bash
-cd c:\workspace\ai-project
+git clone https://github.com/pushpendrasinghbaghel-ai/banking-agent-otel-dt.git
+cd banking-agent-otel-dt
 ```
 
 ### 2. Configure Environment Variables
@@ -84,271 +82,138 @@ cp .env.example .env
 ```
 
 Refer to [.env.example](.env.example) for all available configuration options including:
-- **LLM Provider API Keys** (OpenAI, Google Gemini)
 - **Dynatrace Observability Settings** (OTLP endpoint, API token)
-- **Ollama Configuration** (for local models)
+- **Ollama Configuration** (for local AI models)
 
 > **Note**: The `.env` file is git-ignored and will not be committed. Never commit your actual API keys.
 
-### 3. Install Ollama (Optional for Local Models)
-
-For completely free, open-source LLM support:
+### 3. Install Ollama (Required for AI Features)
 
 ```bash
 # Windows (using PowerShell)
-curl https://ollama.ai/install.ps1 | powershell
+winget install Ollama.Ollama
 
 # Pull a model
 ollama pull llama3.2
+
+# Start Ollama server
+ollama serve
 ```
 
-### 4. Build the Project
+### 4. Build and Run
 
 ```bash
-mvn clean install
-```
+# Build the project
+mvn clean package -DskipTests
 
-### 5. Run the Application
-
-```bash
-mvn spring-boot:run
+# Run the application
+java -jar target/banking-agent-0.0.1-SNAPSHOT.jar
 ```
 
 The application will start on `http://localhost:8080`
 
-## API Endpoints
+## Testing the API
 
-### Agent Endpoints
+### Using Postman (Recommended)
 
-#### Query the AI Agent (Default Provider)
+Import the included Postman collection and environment for easy API testing:
+
+1. **Import Collection**: [Banking-AI-Agent.postman_collection.json](Banking-AI-Agent.postman_collection.json)
+2. **Import Environment**: [Banking-AI-Agent.postman_environment.json](Banking-AI-Agent.postman_environment.json)
+
+The collection includes pre-configured requests for:
+- Health checks
+- Account management (create, view, balance)
+- Transactions (deposit, withdraw, transfer)
+- AI agent queries with natural language
+
+### Using cURL
+
+#### Health Check
 ```bash
-POST /api/agent/query
-Content-Type: application/json
-
-{
-  "accountNumber": "ACC001",
-  "query": "What is my current balance?",
-  "context": "checking account"
-}
+curl http://localhost:8080/api/agent/health
 ```
 
-#### Query with Specific Provider
-```bash
-POST /api/agent/query/ollama
-Content-Type: application/json
-
-{
-  "accountNumber": "ACC001",
-  "query": "Show me my recent transactions"
-}
-```
-
-#### Get Available Providers
-```bash
-GET /api/agent/providers
-```
-
-### Account Management
-
-#### Create Account
-```bash
-POST /api/accounts
-Content-Type: application/json
-
-{
-  "accountNumber": "ACC001",
-  "customerName": "John Doe",
-  "email": "john@example.com",
-  "accountType": "CHECKING",
-  "balance": 1000.00,
-  "currency": "USD"
-}
-```
-
-#### Get Account Details
-```bash
-GET /api/accounts/ACC001
-```
-
-#### Get Account Balance
-```bash
-GET /api/accounts/ACC001/balance
-```
-
-### Transaction Management
-
-#### Deposit
-```bash
-POST /api/transactions/deposit
-Content-Type: application/json
-
-{
-  "accountNumber": "ACC001",
-  "amount": 500.00,
-  "description": "Salary deposit"
-}
-```
-
-#### Withdraw
-```bash
-POST /api/transactions/withdraw
-Content-Type: application/json
-
-{
-  "accountNumber": "ACC001",
-  "amount": 100.00,
-  "description": "ATM withdrawal"
-}
-```
-
-#### Transfer
-```bash
-POST /api/transactions/transfer
-Content-Type: application/json
-
-{
-  "fromAccount": "ACC001",
-  "toAccount": "ACC002",
-  "amount": 250.00,
-  "description": "Transfer to savings"
-}
-```
-
-#### Get Transaction History
-```bash
-GET /api/transactions/account/ACC001
-```
-
-## Usage Examples
-
-### Example 1: Check Balance with Natural Language
-
+#### Query the AI Agent
 ```bash
 curl -X POST http://localhost:8080/api/agent/query \
   -H "Content-Type: application/json" \
   -d '{
     "accountNumber": "ACC001",
-    "query": "How much money do I have?",
-    "operationType": "CHECK_BALANCE"
+    "query": "What is my current balance?"
   }'
 ```
 
-### Example 2: View Transactions Using Ollama (Free)
-
+#### Get Account Balance
 ```bash
-curl -X POST http://localhost:8080/api/agent/query/ollama \
+curl http://localhost:8080/api/accounts/ACC001/balance
+```
+
+#### Make a Deposit
+```bash
+curl -X POST http://localhost:8080/api/transactions/deposit \
   -H "Content-Type: application/json" \
   -d '{
     "accountNumber": "ACC001",
-    "query": "Show me my last 10 transactions"
+    "amount": 500.00,
+    "description": "Salary deposit"
   }'
 ```
 
-### Example 3: General Banking Inquiry
+## API Endpoints
 
-```bash
-curl -X POST http://localhost:8080/api/agent/query/gemini \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What are the benefits of a savings account?",
-    "context": "general inquiry"
-  }'
-```
-
-## LLM Provider Configuration
-
-### Free Tier Options
-
-1. **OpenAI** - $5 free credit for new users
-   - Model: gpt-4o-mini (cost-effective)
-   - Configure: `OPENAI_API_KEY`
-
-2. **Google Gemini** - Generous free tier
-   - Model: gemini-2.0-flash-exp
-   - Configure: `GOOGLE_CLOUD_PROJECT_ID`
-
-3. **Ollama** - Completely free and open-source
-   - Models: llama3.2, mistral, codellama, etc.
-   - Configure: `OLLAMA_BASE_URL`
-
-### Switching Providers
-
-Edit `application.yml`:
-
-```yaml
-banking:
-  agent:
-    default-llm: ollama  # Change to: openai, gemini, or ollama
-    fallback-llm: ollama
-```
-
-## Embabel Agent Framework Integration
-
-This project uses patterns inspired by the Embabel Agent framework:
-
-- **Action-based architecture**: Each banking operation is an action
-- **Goal-oriented design**: Agent works towards customer goals
-- **Type-safe domain models**: Strong typing with Jackson annotations
-- **Multi-LLM support**: Easy integration with multiple AI providers
-- **Testability**: Clean separation of concerns for unit testing
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/agent/health` | Health check |
+| POST | `/api/agent/query` | Query AI agent with natural language |
+| GET | `/api/agent/providers` | List available LLM providers |
+| GET | `/api/accounts/{id}` | Get account details |
+| GET | `/api/accounts/{id}/balance` | Get account balance |
+| POST | `/api/accounts` | Create new account |
+| POST | `/api/transactions/deposit` | Make a deposit |
+| POST | `/api/transactions/withdraw` | Make a withdrawal |
+| POST | `/api/transactions/transfer` | Transfer between accounts |
+| GET | `/api/transactions/account/{id}` | Get transaction history |
 
 ## Dynatrace Observability
 
-This application is fully instrumented to send **traces, logs, and metrics** to Dynatrace via OTLP (OpenTelemetry Protocol).
-
-### Quick Setup
-
-1. Set your Dynatrace endpoint and API token in `application.yml`
-2. Run the application
-3. All telemetry data is automatically exported
-
-For detailed setup instructions, see [DYNATRACE-SETUP.md](DYNATRACE-SETUP.md).
+This application exports **traces, logs, and metrics** to Dynatrace via OTLP.
 
 ### What's Monitored
 
-| Signal | Technology | Endpoint |
-|--------|------------|----------|
+| Signal | Technology | Dynatrace Endpoint |
+|--------|------------|-------------------|
 | **Metrics** | Micrometer OTLP Registry | `/api/v2/otlp/v1/metrics` |
 | **Traces** | OpenTelemetry SDK | `/api/v2/otlp/v1/traces` |
 | **Logs** | OpenTelemetry Logback Appender | `/api/v2/otlp/v1/logs` |
 
+### Setup
+
+1. Set `DYNATRACE_OTLP_ENDPOINT` and `DYNATRACE_API_TOKEN` in your `.env` file
+2. Run the application
+3. View telemetry in Dynatrace
+
+For detailed setup, see [DYNATRACE-SETUP.md](DYNATRACE-SETUP.md).
+
 ## Database
 
-The application uses H2 in-memory database for development. Access the console at:
-- URL: `http://localhost:8080/h2-console`
+The application uses H2 in-memory database with sample data pre-loaded.
+
+Access the H2 console at: `http://localhost:8080/h2-console`
 - JDBC URL: `jdbc:h2:mem:bankingdb`
 - Username: `sa`
 - Password: (leave empty)
 
-### Switching to Production Database
+## Documentation
 
-Update `application.yml` for PostgreSQL:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/bankingdb
-    username: your_username
-    password: your_password
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-```
-
-## Future Enhancements
-
-Based on Embabel Agent framework capabilities:
-
-- [ ] Implement @Agent annotations for cleaner agent definitions
-- [ ] Add GOAP (Goal Oriented Action Planning) for complex workflows
-- [ ] Integrate Embabel's federation for multi-agent scenarios
-- [ ] Add MCP (Model Context Protocol) server support
-- [ ] Implement tool groups for specialized banking operations
-- [ ] Add comprehensive testing with Embabel test support
-- [ ] Deploy as containerized microservice
+- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
+- [DYNATRACE-SETUP.md](DYNATRACE-SETUP.md) - Dynatrace configuration details
+- [OPENLLMETRY-GUIDE.md](OPENLLMETRY-GUIDE.md) - LLM observability guide
+- [TEST-MONITORING.md](TEST-MONITORING.md) - Testing and monitoring guide
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions are welcome! Please:
 
 1. Fork the repository
 2. Create a feature branch
@@ -358,23 +223,15 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+This project is licensed under the Apache License 2.0.
 
 ## Resources
 
-- [Embabel Agent Framework](https://github.com/embabel/embabel-agent)
 - [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/)
-- [OpenAI API](https://platform.openai.com/docs)
-- [Google Gemini API](https://ai.google.dev/)
+- [OpenTelemetry Java](https://opentelemetry.io/docs/languages/java/)
+- [Dynatrace OTLP Ingest](https://docs.dynatrace.com/docs/extend-dynatrace/opentelemetry)
 - [Ollama](https://ollama.ai/)
-
-## Support
-
-For issues and questions:
-- Create an issue in this repository
-- Check Embabel Agent documentation
-- Join the Embabel Discord community
 
 ---
 
-Built with ❤️ using Spring Boot and Embabel Agent Framework
+Built with ❤️ using Spring Boot and OpenTelemetry
