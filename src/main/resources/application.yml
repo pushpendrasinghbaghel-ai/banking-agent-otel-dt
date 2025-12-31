@@ -31,6 +31,12 @@ spring:
         options:
           model: llama3.2
           temperature: 0.7
+    # Spring AI Native Observations
+    chat:
+      observations:
+        include-prompt: true
+        include-completion: true
+        include-error-logging: true
 
 # Server Configuration
 server:
