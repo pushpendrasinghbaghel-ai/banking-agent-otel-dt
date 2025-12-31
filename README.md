@@ -74,19 +74,21 @@ cd c:\workspace\ai-project
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file or set environment variables:
+Copy the example environment file and fill in your values:
 
 ```bash
-# OpenAI (Free tier available)
-export OPENAI_API_KEY=your-openai-api-key
+# Copy the example file
+cp .env.example .env
 
-# Google Gemini (Free tier available)
-export GOOGLE_CLOUD_PROJECT_ID=your-project-id
-export GOOGLE_CLOUD_LOCATION=us-central1
-
-# Ollama (Self-hosted, completely free)
-export OLLAMA_BASE_URL=http://localhost:11434
+# Edit .env with your actual values
 ```
+
+Refer to [.env.example](.env.example) for all available configuration options including:
+- **LLM Provider API Keys** (OpenAI, Google Gemini)
+- **Dynatrace Observability Settings** (OTLP endpoint, API token)
+- **Ollama Configuration** (for local models)
+
+> **Note**: The `.env` file is git-ignored and will not be committed. Never commit your actual API keys.
 
 ### 3. Install Ollama (Optional for Local Models)
 
