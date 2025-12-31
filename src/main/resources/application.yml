@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: banking-agent
+
+  # Database Configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:bankingdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        '[format_sql]': true
+
+  # AI Configuration
+  ai:
+    # Ollama Configuration (local/self-hosted)
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: llama3.2
+          temperature: 0.7
+
+# Server Configuration
+server:
+  port: 8080
+
+# Banking Agent Configuration
+banking:
+  agent:
+    default-llm: ollama
+
+# Dynatrace Configuration
+dynatrace:
+  environment: ${DYNATRACE_ENVIRONMENT:dev}
+
+
+# Management & Actuator Configuration for Dynatrace
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,beans
+  endpoint:
+    health:
+      show-details: always
+  
+  # Metrics Configuration
+  metrics:
+    distribution:
+      percentiles-histogram:
+        '[http.server.requests]': true
+    tags:
+      application: ${spring.application.name}
+      environment: ${dynatrace.environment}
+      '[service.name]': ${spring.application.name}
+  
+  # Tracing Configuration with Spring Boot 3.x
+  tracing:
+    sampling:
+      probability: 1.0
+    enabled: true
+  
+  # OTLP Metrics Export (Spring Boot 3.x format)
+  otlp:
+    metrics:
+      export:
+        enabled: ${DYNATRACE_ENABLED:true}
+        url: ${DYNATRACE_OTLP_METRICS_URL:https://your-environment.live.dynatrace.com/api/v2/otlp/v1/metrics}
+        step: 10s
+        headers:
+          Authorization: ${DYNATRACE_API_TOKEN:}
+
+# OpenTelemetry SDK Configuration (for traces and logs)
+otel:
+  exporter:
+    otlp:
+      endpoint: ${DYNATRACE_OTLP_ENDPOINT:https://your-environment.live.dynatrace.com/api/v2/otlp}
+      authorization: ${DYNATRACE_API_TOKEN:}

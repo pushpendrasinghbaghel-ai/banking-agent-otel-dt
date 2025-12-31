@@ -1,0 +1,859 @@
+{
+	"info": {
+		"_postman_id": "banking-ai-agent-001",
+		"name": "Banking AI Agent API",
+		"description": "Complete API collection for Banking AI Agent with multi-LLM support (OpenAI, Ollama)\n\nBase URL: http://localhost:8080\n\nFeatures:\n- Account Management\n- Transaction Operations (Deposit, Withdrawal, Transfer)\n- AI Agent Queries with Natural Language\n- Multiple LLM Provider Support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health & Status",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has status field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/agent/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"health"
+							]
+						},
+						"description": "Check if the banking agent service is running"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Available LLM Providers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains provider information\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('openai');",
+									"    pm.expect(jsonData).to.have.property('ollama');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/agent/providers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"providers"
+							]
+						},
+						"description": "Check which LLM providers are configured and available"
+					},
+					"response": []
+				}
+			],
+			"description": "Health check and system status endpoints"
+		},
+		{
+			"name": "Account Management",
+			"item": [
+				{
+					"name": "Create Account - Checking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Account created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('accountNumber');",
+									"    pm.expect(jsonData.accountNumber).to.eql('ACC001');",
+									"    pm.environment.set(\"account1\", jsonData.accountNumber);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"customerName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"accountType\": \"CHECKING\",\n  \"balance\": 1000.00,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts"
+							]
+						},
+						"description": "Create a new checking account"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Account - Savings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Account created successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.accountNumber).to.eql('ACC002');",
+									"    pm.environment.set(\"account2\", jsonData.accountNumber);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC002\",\n  \"customerName\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"accountType\": \"SAVINGS\",\n  \"balance\": 5000.00,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts"
+							]
+						},
+						"description": "Create a new savings account"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Accounts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts"
+							]
+						},
+						"description": "Retrieve all bank accounts"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account by Number",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Account details are correct\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.accountNumber).to.eql('ACC001');",
+									"    pm.expect(jsonData).to.have.property('balance');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/accounts/ACC001",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts",
+								"ACC001"
+							]
+						},
+						"description": "Get specific account details by account number"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account Balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Balance is returned\", function () {",
+									"    pm.expect(pm.response.text()).to.include('Balance');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/accounts/ACC001/balance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"accounts",
+								"ACC001",
+								"balance"
+							]
+						},
+						"description": "Get the current balance of an account"
+					},
+					"response": []
+				}
+			],
+			"description": "Account creation, retrieval, and management endpoints"
+		},
+		{
+			"name": "Transaction Operations",
+			"item": [
+				{
+					"name": "Deposit Money",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Deposit successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.type).to.eql('DEPOSIT');",
+									"    pm.expect(jsonData.status).to.eql('COMPLETED');",
+									"    pm.expect(jsonData).to.have.property('balanceAfter');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"amount\": 500.00,\n  \"description\": \"Salary deposit\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/deposit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"deposit"
+							]
+						},
+						"description": "Deposit money into an account"
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Money",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Withdrawal successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.type).to.eql('WITHDRAWAL');",
+									"    pm.expect(jsonData.status).to.eql('COMPLETED');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"amount\": 100.00,\n  \"description\": \"ATM withdrawal\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/withdraw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"withdraw"
+							]
+						},
+						"description": "Withdraw money from an account"
+					},
+					"response": []
+				},
+				{
+					"name": "Transfer Money",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Transfer successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.type).to.eql('TRANSFER');",
+									"    pm.expect(jsonData).to.have.property('destinationAccount');",
+									"    pm.expect(jsonData.status).to.eql('COMPLETED');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fromAccount\": \"ACC001\",\n  \"toAccount\": \"ACC002\",\n  \"amount\": 250.00,\n  \"description\": \"Transfer to savings account\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/transfer",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"transfer"
+							]
+						},
+						"description": "Transfer money between two accounts"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Transactions returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/transactions/account/ACC001",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"account",
+								"ACC001"
+							]
+						},
+						"description": "Get all transactions for a specific account"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Date Range",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/transactions/account/ACC001/range?startDate=2025-01-01T00:00:00&endDate=2025-12-31T23:59:59",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"account",
+								"ACC001",
+								"range"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31T23:59:59"
+								}
+							]
+						},
+						"description": "Get transactions within a specific date range"
+					},
+					"response": []
+				}
+			],
+			"description": "Banking transaction operations (deposits, withdrawals, transfers)"
+		},
+		{
+			"name": "AI Agent Queries",
+			"item": [
+				{
+					"name": "Check Balance (AI)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"AI response received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData).to.have.property('llmProvider');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"query\": \"What is my current balance?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query"
+							]
+						},
+						"description": "Ask AI agent about account balance in natural language"
+					},
+					"response": []
+				},
+				{
+					"name": "View Transactions (AI)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"AI provides transaction summary\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"query\": \"Show me my recent transactions\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query"
+							]
+						},
+						"description": "Ask AI agent to show transaction history"
+					},
+					"response": []
+				},
+				{
+					"name": "Account Information (AI)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"query\": \"Tell me about my account\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query"
+							]
+						},
+						"description": "Get comprehensive account information from AI"
+					},
+					"response": []
+				},
+				{
+					"name": "General Banking Question (AI)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"AI provides helpful answer\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"What are the benefits of a savings account?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query"
+							]
+						},
+						"description": "Ask general banking questions without account number"
+					},
+					"response": []
+				},
+				{
+					"name": "Query with OpenAI Provider",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"OpenAI provider used\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.llmProvider).to.eql('openai');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"query\": \"What's my balance?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query/openai",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query",
+								"openai"
+							]
+						},
+						"description": "Query using OpenAI specifically"
+					},
+					"response": []
+				},
+				{
+					"name": "Query with Ollama Provider",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Ollama provider used\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.llmProvider).to.eql('ollama');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"ACC001\",\n  \"query\": \"Show me my transactions\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/agent/query/ollama",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"agent",
+								"query",
+								"ollama"
+							]
+						},
+						"description": "Query using Ollama (local LLM) specifically"
+					},
+					"response": []
+				}
+			],
+			"description": "Natural language queries to AI banking agent"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

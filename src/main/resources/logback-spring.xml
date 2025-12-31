@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- OpenTelemetry Appender for Log Export to Dynatrace -->
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+        <captureCodeAttributes>true</captureCodeAttributes>
+        <captureMarkerAttribute>true</captureMarkerAttribute>
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+        <captureLoggerContext>true</captureLoggerContext>
+        <captureMdcAttributes>*</captureMdcAttributes>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OTEL"/>
+    </root>
+
+    <!-- Application-specific loggers -->
+    <logger name="com.banking.agent" level="DEBUG"/>
+
+    <!-- =================================================================== -->
+    <!-- OpenTelemetry SDK Internal Debugging - VERY VERBOSE                   -->
+    <!-- =================================================================== -->
+    <!-- General OTel SDK logging -->
+    <logger name="io.opentelemetry" level="DEBUG"/>
+
+        <!-- OkHttp wire logging -->
+    <logger name="okhttp3.OkHttpClient" level="DEBUG"/>
+    
+    <!-- Log the raw data being sent by the HTTP exporter -->
+    <logger name="io.opentelemetry.exporter.otlp.http.logs" level="DEBUG"/>
+    
+    <!-- Log the batching processor status -->
+    <logger name="io.opentelemetry.sdk.logs" level="DEBUG"/>
+
+    <!-- Log the underlying HTTP client (OkHttp) to see raw requests/responses -->
+    <logger name="io.opentelemetry.exporter.internal.okhttp" level="DEBUG"/>
+    <!-- =================================================================== -->
+
+</configuration>
