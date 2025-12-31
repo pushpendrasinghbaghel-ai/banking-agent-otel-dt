@@ -5,28 +5,21 @@ import com.banking.agent.domain.BankingRequest;
 import com.banking.agent.domain.BankingResponse;
 import com.banking.agent.domain.Transaction;
 import com.banking.agent.service.AccountService;
-import com.banking.agent.service.LlmMonitoringService;
-import com.banking.agent.service.LlmProviderService;
-import com.banking.agent.service.OpenLLMetryService;
+import com.banking.agent.service.TracedChatService;
 import com.banking.agent.service.TransactionService;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Banking AI Agent using Embabel-inspired patterns.
- * Handles customer queries and performs banking operations.
+ * Banking AI Agent - Handles customer queries and performs banking operations.
+ * 
+ * Uses TracedChatService for LLM calls which automatically captures:
+ * - gen_ai.prompt: The full prompt sent to the LLM
+ * - gen_ai.completion: The response from the LLM
+ * - Token usage and latency metrics
  */
 @Component
 @Slf4j
@@ -34,81 +27,47 @@ public class BankingAgent {
 
     private final AccountService accountService;
     private final TransactionService transactionService;
-    private final LlmProviderService llmProviderService;
-    private final LlmMonitoringService monitoringService;
-    private final OpenLLMetryService openLLMetryService;
-    private final Tracer tracer;
+    private final TracedChatService tracedChatService;
 
-    public BankingAgent(AccountService accountService, TransactionService transactionService, 
-                       LlmProviderService llmProviderService, LlmMonitoringService monitoringService,
-                       OpenLLMetryService openLLMetryService, Tracer tracer) {
+    public BankingAgent(AccountService accountService, 
+                       TransactionService transactionService, 
+                       TracedChatService tracedChatService) {
         this.accountService = accountService;
         this.transactionService = transactionService;
-        this.llmProviderService = llmProviderService;
-        this.monitoringService = monitoringService;
-        this.openLLMetryService = openLLMetryService;
-        this.tracer = tracer;
+        this.tracedChatService = tracedChatService;
     }
 
     /**
-     * Process a banking request using the specified LLM provider
+     * Process a banking request using the specified LLM provider.
+     * Tracing is handled automatically by AOP.
      */
     public BankingResponse processRequest(BankingRequest request, String llmProvider) {
         log.info("Processing banking request with provider: {}", llmProvider);
-        
-        Span requestSpan = tracer.spanBuilder("banking.process_request")
-                .setAttribute("banking.provider", llmProvider)
-                .setAttribute("banking.account_number", request.getAccountNumber() != null ? request.getAccountNumber() : "none")
-                .startSpan();
         
         try {
             // Determine the intent of the request
             String intent = determineIntent(request, llmProvider);
             log.debug("Determined intent: {}", intent);
-            requestSpan.setAttribute("banking.intent", intent);
 
             // Execute the appropriate action based on intent
-            BankingResponse response = executeAction(request, intent, llmProvider);
-            requestSpan.setAttribute("banking.response_status", response.getStatus().toString());
-            
-            // Record business event
-            monitoringService.recordBusinessEvent("banking_request_processed", Map.of(
-                    "provider", llmProvider,
-                    "intent", intent,
-                    "status", response.getStatus().toString(),
-                    "account", request.getAccountNumber() != null ? request.getAccountNumber() : "none"
-            ));
-            
-            return response;
+            return executeAction(request, intent, llmProvider);
             
         } catch (Exception e) {
             log.error("Error processing banking request", e);
-            requestSpan.recordException(e);
             return new BankingResponse(
                     "I apologize, but I encountered an error processing your request: " + e.getMessage(),
                     null,
                     BankingResponse.ResponseStatus.ERROR,
                     llmProvider
             );
-        } finally {
-            requestSpan.end();
         }
     }
 
     /**
-     * Determine the customer's intent using LLM
+     * Determine the customer's intent using LLM.
+     * TracedChatService captures prompt/completion in traces.
      */
-    private String determineIntent(BankingRequest request, String llmProvider) {
-        ChatClient chatClient = llmProviderService.getChatClient(llmProvider);
-        
-        // Start LLM monitoring (legacy)
-        LlmMonitoringService.LlmMonitoringContext monitoringContext = 
-                monitoringService.startMonitoring(llmProvider, "intent-classification", "DETERMINE_INTENT");
-        
-        // Start OpenLLMetry monitoring with semantic conventions
-        OpenLLMetryService.LLMSpanContext llmSpan = 
-                openLLMetryService.startChatCompletion(llmProvider, "intent-classification", "classify_intent");
-        
+    String determineIntent(BankingRequest request, String llmProvider) {
         String prompt = String.format("""
                 Analyze the following customer query and determine their intent.
                 Respond with ONLY ONE of these intents: CHECK_BALANCE, VIEW_TRANSACTIONS, DEPOSIT, WITHDRAWAL, TRANSFER, ACCOUNT_INFO, GENERAL_INQUIRY
@@ -123,30 +82,9 @@ public class BankingAgent {
                 request.getContext() != null ? request.getContext() : "None"
         );
 
-        try {
-            // Record prompt details
-            openLLMetryService.recordPrompt(llmSpan, prompt, 0.7, null);
-            openLLMetryService.recordBankingContext(llmSpan, "DETERMINE_INTENT", request.getAccountNumber());
+        String response = tracedChatService.chat(prompt, llmProvider);
             
-            String response = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
-            
-            // Record completion
-            openLLMetryService.recordCompletion(llmSpan, response, "stop");
-            openLLMetryService.recordSuccess(llmSpan);
-            
-            // Legacy monitoring
-            int estimatedTokens = (int) llmSpan.getTotalTokens();
-            monitoringService.recordSuccess(monitoringContext, estimatedTokens, response);
-            
-            return response.trim().toUpperCase();
-        } catch (Exception e) {
-            openLLMetryService.recordError(llmSpan, e);
-            monitoringService.recordError(monitoringContext, e);
-            throw e;
-        }
+        return response.trim().toUpperCase();
     }
 
     /**
@@ -187,7 +125,6 @@ public class BankingAgent {
             );
         }
 
-        ChatClient chatClient = llmProviderService.getChatClient(llmProvider);
         String prompt = String.format("""
                 Generate a friendly, natural response for a customer balance inquiry.
                 
@@ -205,10 +142,7 @@ public class BankingAgent {
                 account.getStatus()
         );
 
-        String message = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
+        String message = tracedChatService.chat(prompt, llmProvider);
 
         return new BankingResponse(message, account, BankingResponse.ResponseStatus.SUCCESS, llmProvider);
     }
@@ -237,8 +171,6 @@ public class BankingAgent {
             );
         }
 
-        ChatClient chatClient = llmProviderService.getChatClient(llmProvider);
-        
         StringBuilder transactionSummary = new StringBuilder();
         transactions.stream().limit(10).forEach(t -> 
             transactionSummary.append(String.format("- %s: %s %s %s on %s\n",
@@ -265,10 +197,7 @@ public class BankingAgent {
                 transactionSummary.toString()
         );
 
-        String message = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
+        String message = tracedChatService.chat(prompt, llmProvider);
 
         return new BankingResponse(message, transactions, BankingResponse.ResponseStatus.SUCCESS, llmProvider);
     }
@@ -298,7 +227,6 @@ public class BankingAgent {
             );
         }
 
-        ChatClient chatClient = llmProviderService.getChatClient(llmProvider);
         String prompt = String.format("""
                 Generate a comprehensive summary of the customer's account information.
                 
@@ -320,10 +248,7 @@ public class BankingAgent {
                 account.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         );
 
-        String message = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
+        String message = tracedChatService.chat(prompt, llmProvider);
 
         return new BankingResponse(message, account, BankingResponse.ResponseStatus.SUCCESS, llmProvider);
     }
@@ -332,8 +257,6 @@ public class BankingAgent {
      * Handle general banking inquiries
      */
     private BankingResponse handleGeneralInquiry(BankingRequest request, String llmProvider) {
-        ChatClient chatClient = llmProviderService.getChatClient(llmProvider);
-        
         String prompt = String.format("""
                 You are a helpful banking assistant. Answer the following customer question:
                 
@@ -347,10 +270,7 @@ public class BankingAgent {
                 request.getContext() != null ? request.getContext() : "General banking inquiry"
         );
 
-        String message = chatClient.prompt()
-                .user(prompt)
-                .call()
-                .content();
+        String message = tracedChatService.chat(prompt, llmProvider);
 
         return new BankingResponse(message, null, BankingResponse.ResponseStatus.SUCCESS, llmProvider);
     }
