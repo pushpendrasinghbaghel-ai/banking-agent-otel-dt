@@ -175,6 +175,92 @@ curl -X POST http://localhost:8080/api/transactions/deposit \
 | POST | `/api/transactions/transfer` | Transfer between accounts |
 | GET | `/api/transactions/account/{id}` | Get transaction history |
 
+## Observability Approach: Recommended Architecture
+
+This project uses **OpenTelemetry SDK** for LLM/Spring AI observability. However, after extensive testing, here's our recommended production architecture:
+
+### ✅ Recommended: Dynatrace OneAgent + SDK for LLM
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    RECOMMENDED ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Dynatrace OneAgent          +        OpenTelemetry SDK         │
+│   ─────────────────                    ──────────────────        │
+│   • HTTP/REST traces                   • LLM/Gen AI spans        │
+│   • JDBC/SQL queries                   • Spring AI observations  │
+│   • JVM metrics                        • Custom business spans   │
+│   • Process monitoring                 • Prompt/completion data  │
+│   • Full-stack correlation                                       │
+│                                                                  │
+│   WHY: OneAgent provides automatic instrumentation for           │
+│        everything EXCEPT LLM calls (which need SDK)              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### ❌ Why NOT Manual/Custom Instrumentation
+
+This project contains examples of custom AOP-based instrumentation (`RepositoryTracingAspect.java`, `TracingDataSourceConfig.java`). **These are included for educational purposes only and should NOT be used in production.**
+
+| Approach | Effort | Maintenance | Coverage | Recommendation |
+|----------|--------|-------------|----------|----------------|
+| **Dynatrace OneAgent** | Zero code | Auto-updated | Full stack | ✅ Use this |
+| **OTel Java Agent** | Config only | Community | Wide | ✅ Alternative |
+| **Custom AOP aspects** | High | Manual | Partial | ❌ Avoid |
+| **Custom DataSource wrapper** | High | Manual | JDBC only | ❌ Avoid |
+
+#### Problems with Custom Instrumentation
+
+```java
+// ❌ DON'T DO THIS IN PRODUCTION
+@Aspect
+@Component
+public class RepositoryTracingAspect {
+    @Around("execution(* com.banking.agent.repository.*.*(..))")
+    public Object traceRepositoryMethod(ProceedingJoinPoint pjp) {
+        // This becomes YOUR maintenance burden:
+        // - Every new repository pattern needs handling
+        // - Library updates may break your pointcuts
+        // - You're now the instrumentation team
+        // - Testing overhead multiplies
+    }
+}
+```
+
+**Real-world issues we encountered:**
+1. Pointcuts break with Spring Data proxy changes
+2. SQL capture requires wrapping DataSource, Connection, Statement, PreparedStatement
+3. Missing coverage for async operations, reactive streams
+4. No correlation with HTTP spans without manual context propagation
+5. Significant development time vs. zero-code agents
+
+### What Each Approach Provides
+
+| Capability | OneAgent | OTel Agent | SDK Only | Custom AOP |
+|------------|----------|------------|----------|------------|
+| HTTP traces | ✅ Auto | ✅ Auto | ❌ Manual | ❌ Manual |
+| JDBC/SQL | ✅ Auto | ✅ Auto | ❌ Manual | ⚠️ Partial |
+| JVM metrics | ✅ Auto | ⚠️ Limited | ❌ No | ❌ No |
+| LLM spans | ❌ No | ❌ No | ✅ Yes | ✅ Yes |
+| Process monitoring | ✅ Auto | ❌ No | ❌ No | ❌ No |
+| Maintenance | ✅ Zero | ⚠️ Version updates | ⚠️ Code changes | ❌ High |
+
+### Production Recommendation
+
+```bash
+# 1. Install Dynatrace OneAgent on your host/container
+#    (provides HTTP, JDBC, JVM, infrastructure automatically)
+
+# 2. Keep SDK dependencies for LLM observability only
+#    (Spring AI's built-in @Observed + our LlmMonitoringService)
+
+# 3. Remove custom instrumentation code
+#    - RepositoryTracingAspect.java (educational only)
+#    - TracingDataSourceConfig.java (educational only)
+```
+
 ## Dynatrace Observability
 
 This application exports **traces, logs, and metrics** to Dynatrace via OTLP.
@@ -194,6 +280,16 @@ This application exports **traces, logs, and metrics** to Dynatrace via OTLP.
 3. View telemetry in Dynatrace
 
 For detailed setup, see [DYNATRACE-SETUP.md](DYNATRACE-SETUP.md).
+
+## Related POV Projects
+
+For a comprehensive comparison of observability approaches, see:
+
+| Repository | Approach | Purpose |
+|------------|----------|---------|
+| [banking-agent-otel-sdk](https://github.com/pushpendrasinghbaghel-ai/banking-agent-otel-sdk) | OTel SDK only | LLM observability baseline |
+| [banking-agent-otel-agent](https://github.com/pushpendrasinghbaghel-ai/banking-agent-otel-agent) | OTel Java Agent | Full auto-instrumentation |
+| [spring-ai-observability-pov](https://github.com/pushpendrasinghbaghel-ai/spring-ai-observability-pov) | POV Documentation | Comparison results & evidence |
 
 ## Database
 
